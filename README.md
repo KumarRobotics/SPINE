@@ -16,7 +16,10 @@ This repository contains the
 
 # Installation 
 
+We provide support for deployment on the Clearpath Jackal. Instructions for native installation are below. You can also use the provided Docker image in [jackal-infrastructure](https://github.com/KumarRobotics/jackal-infrastructure).
+
 ## ros dependencies
+* [jackal-infrastructure](https://github.com/KumarRobotics/jackal-infrastructure)
 * [open-vocab-vision-ros](https://github.com/ZacRavichandran/open-vocab-vision-ros)
 
 
