@@ -16,27 +16,7 @@ This repository contains the
 
 # Installation 
 
-We provide support for deployment on the Clearpath Jackal. Instructions for native installation are below. You can also use the provided Docker image in [jackal-infrastructure](https://github.com/KumarRobotics/jackal-infrastructure).
-
-## ros dependencies
-* [jackal-infrastructure](https://github.com/KumarRobotics/jackal-infrastructure)
-* [open-vocab-vision-ros](https://github.com/ZacRavichandran/open-vocab-vision-ros)
-
-
-Install this repo as a python package
-
-```
-python -m pip install -r requirements.txt
-python -m pip install -e .
-```
-
-
-Then install the ROS wrapper 
-
-```
-catkin build spine_ros
-```
-
+We provide support for deployment on the Clearpath Jackal via the provided Docker image in [jackal-infrastructure](https://github.com/KumarRobotics/jackal-infrastructure).
 
 # Example
 
