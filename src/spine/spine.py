@@ -9,7 +9,7 @@ from openai import OpenAI
 
 from spine.llm_logging import LLMDataLogger, get_logger
 from spine.mapping.graph_util import GraphHandler
-from spine.models import OpenAILLM
+from spine.models import HuggingFaceLLM, OpenAILLM, UnslothLLM
 from spine.prompts.prompts import INVALID_JSON, get_base_prompt_update_graph
 
 ValidPlanFeedback = namedtuple("ValidPlanFeedback", ["success", "message"])
@@ -34,8 +34,23 @@ EXPLORE_ACTIONS = set(["explore_region"])
 
 
 class SPINE:
-    def __init__(self, graph: GraphHandler, log_name: Optional[str] = "") -> None:
+    def __init__(
+        self,
+        graph: GraphHandler,
+        log_name: Optional[str] = "",
+        llm: Optional[str] = "openai",
+        model_path: Optional[str] = "",
+    ) -> None:
         self.graph = graph
+        if llm == "openai":
+            self.client = OpenAILLM()
+        elif llm == "unsloth":
+            self.client = UnslothLLM(model_path=model_path)
+        elif llm == "huggingface":
+            self.client = HuggingFaceLLM(model_path=model_path)
+        else:
+            raise ValueError(f"llm type: {llm} unsupported")
+
         self.client = OpenAILLM()
         self.model = "gpt-4o"
         self.n_attempts = 3
@@ -337,7 +352,7 @@ class SPINE:
                 logs.append(generated_plan)
                 logs.append(is_valid_plan.message)
 
-                print(logs[-1], logs[-2])
+                print(f"[spine] {logs[-1]}, {logs[-2]}")
 
                 continue
 
