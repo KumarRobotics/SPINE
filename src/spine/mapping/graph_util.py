@@ -115,14 +115,8 @@ def parse_graph(
         Networkx and string of json
     """
     origin = np.array([0, 0])
-    """
-    if "origin" in data:
-        origin = utm_origin
-        origin = np.array(to_float_list(data["origin"]))
-        # print(f"original origin is: {origin}")
-        origin = utm_origin - origin
-    """
     data = deepcopy(data)  # don't modify input data
+    as_str = str(data)
 
     if utm_origin is not None:
         origin = utm_origin
@@ -155,8 +149,9 @@ def parse_graph(
             raise ValueError
             # print("flipping coords")
             coords = [coords[0], -coords[1]]
-
-        G.add_node(node["name"], coords=coords, type="region")
+        node.pop("coords")
+        name = node.pop("name")
+        G.add_node(name, coords=coords, type="object", **node)
 
     for edge in data["object_connections"]:
         c1 = G.nodes[edge[0]]["coords"]
@@ -172,7 +167,7 @@ def parse_graph(
         dist = np.linalg.norm(np.array(c1) - np.array(c2))
         G.add_edge(edge[0], edge[1], type="region", weight=dist)
 
-    return G, str(data)
+    return G, as_str
 
 
 class GraphHandler:
