@@ -288,8 +288,6 @@ class SPINENode:
 
         data = new_data
 
-        graph_as_json_str = json.dumps(data)
-
         # TODO assume incoming graph has node road_1
         custom_data = {
             "regions": [{"name": "road_0", "coords": f"[{origin[0]}, {origin[1]}]"}],
@@ -301,7 +299,7 @@ class SPINENode:
         if self.waiting_for_graph == True:
             self.waiting_for_graph = False
             success = self.graph.reset(
-                graph_as_json=graph_as_json_str,
+                graph_as_dict=data,
                 rotation=rotation_origin,
                 utm_origin=origin,
                 custom_data=custom_data,
@@ -349,7 +347,7 @@ class SPINENode:
             # print(f"processing: {graph_as_json_str}")
             tmp_handler = GraphHandler("")
             success = tmp_handler.reset(
-                graph_as_json=graph_as_json_str,
+                graph_as_dict=graph_as_json_str,
                 rotation=rotation_origin,
                 utm_origin=origin,
                 current_location="",

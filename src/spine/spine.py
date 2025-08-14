@@ -2,13 +2,14 @@ import json
 import logging
 from collections import namedtuple
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from openai import OpenAI
 
-from spine.llm_logging import get_logger
+from spine.llm_logging import LLMDataLogger, get_logger
 from spine.mapping.graph_util import GraphHandler
+from spine.models import OpenAILLM
 from spine.prompts.prompts import INVALID_JSON, get_base_prompt_update_graph
 
 ValidPlanFeedback = namedtuple("ValidPlanFeedback", ["success", "message"])
@@ -33,9 +34,9 @@ EXPLORE_ACTIONS = set(["explore_region"])
 
 
 class SPINE:
-    def __init__(self, graph: GraphHandler) -> None:
+    def __init__(self, graph: GraphHandler, log_name: Optional[str] = "") -> None:
         self.graph = graph
-        self.client = OpenAI()
+        self.client = OpenAILLM()
         self.model = "gpt-4o"
         self.n_attempts = 3
         self.base_request = ""
@@ -52,6 +53,11 @@ class SPINE:
             # fpath=f"llm_logs_{dt_string}.txt",
         )
         self.logger.disabled = True
+
+        self.log_llm_data = False
+        if log_name != "":
+            self.log_llm_data = True
+            self.llm_data_logger = LLMDataLogger(log_name)
 
         self.most_recent_query = []
 
@@ -130,23 +136,23 @@ class SPINE:
             return False, (arg, arg)
 
     def query_llm(self, msg: str) -> Tuple[str, bool]:
+        """Query LLM with `msg`. Note that history is also provided
+        to prompt
+
+        Returns
+        -------
+        Tuple[str, bool]
+            LLM response, success
+        """
         self.most_recent_query = msg
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=msg,
-                temperature=0.05,  # was 1
-                max_tokens=2048,
-                top_p=1,
-                frequency_penalty=0,
-                presence_penalty=0,
-                response_format={"type": "json_object"},
-            )
-            top_msg = response.choices[0].message
-            return top_msg, True
-        except Exception as ex:
-            print(f"got execption: {ex}")
-            return "Error: network dropout", False
+        response, success = self.client.query_llm(msg)
+
+        llm_log = msg + [{"role": "assistant", "content": response}]
+
+        if self.log_llm_data:
+            self.llm_data_logger.log(llm_log)
+
+        return response, success
 
     def _try_parse_command(self, cmd: str) -> Tuple[str, bool]:
         try:
@@ -296,19 +302,19 @@ class SPINE:
         logs = []
 
         for _ in range(self.n_attempts):
-            top_msg, could_query_llm = self.query_llm(msg)
+            generated_plan, could_query_llm = self.query_llm(msg)
 
             if not could_query_llm:
-                return {"msg": top_msg}, False, logs
+                return {"msg": generated_plan}, False, logs
 
-            response, is_valid_json = self.try_parse(top_msg.content)
+            response, is_valid_json = self.try_parse(generated_plan)
 
             if not is_valid_json.success:
                 self.logger.info(
-                    f"Not valid json. Got \n\t==\n\t{top_msg.content}\n"
+                    f"Not valid json. Got \n\t==\n\t{generated_plan}\n"
                     f"=\n\twhich could not be parsed.\n\terror:{is_valid_json.message}.\n\t=="
                 )
-                msg.append({"role": "assistant", "content": top_msg.content})
+                msg.append({"role": "assistant", "content": generated_plan})
                 msg.append(
                     {
                         "role": "user",
@@ -316,7 +322,7 @@ class SPINE:
                     }
                 )
                 logs.append(is_valid_json.message)
-                logs.append(top_msg.content)
+                logs.append(generated_plan)
                 continue
 
             plan, is_valid_plan = self.extract_plan(response["plan"])
@@ -325,10 +331,10 @@ class SPINE:
                 self.logger.info(
                     f"got: {response}\n\tnot valid plan: {is_valid_plan.message}"
                 )
-                msg.append({"role": "assistant", "content": top_msg.content})
+                msg.append({"role": "assistant", "content": generated_plan})
                 msg.append({"role": "user", "content": is_valid_plan.message})
 
-                logs.append(top_msg.content)
+                logs.append(generated_plan)
                 logs.append(is_valid_plan.message)
 
                 print(logs[-1], logs[-2])
@@ -340,7 +346,7 @@ class SPINE:
                 response["plan"] = plan
                 break
 
-        self.msg_history.append({"role": "assistant", "content": top_msg.content})
+        self.msg_history.append({"role": "assistant", "content": generated_plan})
 
         return response, success, logs
 

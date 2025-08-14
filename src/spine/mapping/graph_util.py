@@ -187,7 +187,7 @@ class GraphHandler:
 
     def reset(
         self,
-        graph_as_json: str,
+        graph_as_dict: Dict[str, Dict[str, str | List]],
         current_location: Optional[str] = "",
         rotation: Optional[Rotation] = None,
         utm_origin: Optional[np.ndarray] = None,
@@ -195,7 +195,7 @@ class GraphHandler:
         flip_coords=False,
     ) -> bool:
         try:
-            data = json.loads(graph_as_json)
+            data = graph_as_dict
 
             # TODO, logic is obtuse
             # priority is current location -> incoming argument -> value in data
@@ -212,7 +212,7 @@ class GraphHandler:
             )
             self.as_json_str = self.to_json_str()
         except Exception as ex:
-            print(f"\nexception: {ex}")
+            print(f"\n[graph util] exception: {ex}")
             return False
         return True
 

@@ -1,4 +1,61 @@
-from typing import List, Sequence, Tuple, Dict
+from typing import Dict, List, Optional, Sequence, Tuple
+
+from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedTokenizer
+
+try:
+    from unsloth import FastLanguageModel
+    from unsloth.chat_templates import get_chat_template
+except:
+    print(f"Cannot import unsloth")
+    FastLanguageModel = None
+
+
+def from_huggingface(path: str):
+    model = AutoModelForCausalLM.from_pretrained(path)
+    tokenizer = AutoTokenizer.from_pretrained(path)
+
+    return model, tokenizer
+
+
+def from_pretrained(
+    path: str,
+    max_seq_length: Optional[int] = 2048 * 6,
+    load_in_4bit: Optional[bool] = True,
+    inference: Optional[bool] = False,
+) -> Tuple[FastLanguageModel, PreTrainedTokenizer]:
+    """Load a model from unsloth.
+
+    Parameters
+    ----------
+    path : str
+        Model path. Can be local or huggingface
+    max_seq_length : Optional[int], optional
+        For LLM generation, by default 2048
+    load_in_4bit : Optional[bool], optional
+        Use 4 bit quantized model, by default True
+    inference : Optional[bool], optional
+        Load inference model, by default False
+
+    Returns
+    -------
+    Tuple[FastLanguageModel, PreTrainedTokenizer]
+        Model and tokenizer
+    """
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name=path,  # YOUR MODEL YOU USED FOR TRAINING
+        max_seq_length=max_seq_length,
+        # dtype = dtype,
+        load_in_4bit=load_in_4bit,
+    )
+    if inference:
+        FastLanguageModel.for_inference(model)  # Enable native 2x faster inference
+
+    tokenizer = get_chat_template(
+        tokenizer,
+        chat_template="llama-3.1",
+    )
+
+    return model, tokenizer
 
 
 class UpdatePromptFormer:
