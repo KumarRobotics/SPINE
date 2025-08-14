@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import networkx as nx
@@ -121,6 +122,8 @@ def parse_graph(
         # print(f"original origin is: {origin}")
         origin = utm_origin - origin
     """
+    data = deepcopy(data)  # don't modify input data
+
     if utm_origin is not None:
         origin = utm_origin
 
@@ -130,18 +133,17 @@ def parse_graph(
             if key in data and key in custom_data:
                 data[key].extend(custom_data[key])
 
-    # print(f"origin: {origin}, rot: {rotation}")
-
     G = nx.Graph()
     for node in data["objects"]:
-        c = node["coords"]
-        # print(f"node: {node}, coords: {c}")
         coords = parse_graph_coord(node["coords"], origin=origin, rotation=rotation)
         if flip_coords:
             raise ValueError()
             # print("flipping coords")
             coords = [coords[0], -coords[1]]
-        G.add_node(node["name"], coords=coords, type="object")
+
+        node.pop("coords")
+        name = node.pop("name")
+        G.add_node(name, coords=coords, type="object", **node)
 
     for node in data["regions"]:
         assert "coords" in node, node
